@@ -1,0 +1,15 @@
+{
+  "title": "Recs App — Ops",
+  "editable": true,
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {"type": "stat", "title": "Build / Env", "id": 1, "datasource": "Prometheus", "targets": [{"expr": "recs_build_info"}], "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "/^.*$/"}, "orientation": "auto"}, "transformations": [{"id": "labelsToFields"}]},
+    {"type": "timeseries", "title": "P95 latency (ms)", "id": 2, "datasource": "Prometheus", "targets": [{"expr": "histogram_quantile(0.95, sum(rate(recs_request_latency_ms_bucket[5m])) by (le))"}]},
+    {"type": "timeseries", "title": "Cache hit ratio", "id": 3, "datasource": "Prometheus", "targets": [{"expr": "rate(recs_cache_hits_total[5m]) / (rate(recs_cache_hits_total[5m]) + rate(recs_cache_misses_total[5m]))"}]},
+    {"type": "timeseries", "title": "Stale ratio (p90)", "id": 4, "datasource": "Prometheus", "targets": [{"expr": "histogram_quantile(0.9, sum(rate(recs_stale_ratio_bucket[10m])) by (le))"}]},
+    {"type": "bargauge", "title": "Job failures (1h) by job", "id": 5, "datasource": "Prometheus", "targets": [{"expr": "increase(jobs_failure_total[1h])", "legendFormat": "{{job}}"}]},
+    {"type": "bargauge", "title": "Adapter errors (1h) by adapter", "id": 6, "datasource": "Prometheus", "targets": [{"expr": "increase(adapter_errors_total[1h])", "legendFormat": "{{adapter}}"}]},
+    {"type": "timeseries", "title": "Slow requests rate (/s)", "id": 7, "datasource": "Prometheus", "targets": [{"expr": "rate(recs_slow_requests_total[5m])"}]}
+  ]
+}

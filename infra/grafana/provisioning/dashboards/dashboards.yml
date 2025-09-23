@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: recs-dashboards
+    orgId: 1
+    folder: Recs
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
+

@@ -1,0 +1,44 @@
+name: release-smoke
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose up (prod-like)
+        run: docker compose -f infra/docker-compose.prod.yml up -d --build
+      - name: Wait for API ready
+        run: |
+          for i in {1..60}; do
+            curl -fsS http://localhost:8000/readyz && exit 0 || sleep 2
+          done
+          echo "API not ready"; exit 1
+      - name: Verify metrics + version/sha
+        env:
+          GIT_SHA: ${{ github.sha }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          OUT=$(curl -s http://localhost:8000/metrics | grep recs_build_info || true)
+          echo "$OUT"
+          echo "$OUT" | grep "git_sha=\"${GIT_SHA}\""
+          echo "$OUT" | grep "version=\"${TAG}\""
+      - name: Preflight + family guard
+        run: |
+          make preflight
+          make preflight-family
+      - name: Upload preflight artifacts
+        run: |
+          curl -s "http://localhost:8000/recommendations?for=ross&seed=777" -o ross_777.json
+          curl -s "http://localhost:8000/recommendations?for=ross&intent=family_mix&seed=777&explain=true" -o family_777.json
+          echo "Artifacts saved"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-preflight
+          path: |
+            ross_777.json
+            family_777.json
+

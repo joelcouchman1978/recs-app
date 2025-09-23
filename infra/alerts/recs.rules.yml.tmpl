@@ -1,0 +1,26 @@
+groups:
+- name: recs-app
+  rules:
+  - alert: RecsP95LatencyHigh
+    expr: histogram_quantile(0.95, sum(rate(recs_request_latency_ms_bucket[5m])) by (le)) > ${RECS_TARGET_P95_MS:-300}
+    for: ${RECS_LATENCY_FOR_MIN:-10}m
+    labels: { severity: warning }
+    annotations:
+      summary: "Recs p95 latency high"
+      description: "p95 latency above ${RECS_TARGET_P95_MS:-300}ms for ${RECS_LATENCY_FOR_MIN:-10}m."
+
+  - alert: OffersStaleRatioHigh
+    expr: histogram_quantile(0.90, sum(rate(recs_stale_ratio_bucket[10m])) by (le)) > ${STALE_RATIO_WARN:-0.30}
+    for: ${STALE_RATIO_FOR_MIN:-20}m
+    labels: { severity: warning }
+    annotations:
+      summary: "Stale offer ratio elevated"
+      description: "≥${STALE_RATIO_WARN:-0.30} for ${STALE_RATIO_FOR_MIN:-20}m."
+
+  - alert: RecsErrorRateHigh
+    expr: increase(recs_request_errors_total[10m]) > ${ERROR_RATE_HIGH_10M:-50}
+    for: ${ERROR_RATE_FOR_MIN:-10}m
+    labels: { severity: critical }
+    annotations:
+      summary: "API error rate spiking"
+      description: "> ${ERROR_RATE_HIGH_10M:-50} errors in ${ERROR_RATE_FOR_MIN:-10}m."
