@@ -1,0 +1,27 @@
+name: Automerge Gate
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-auto-merge:
+    if: github.event.label.name == 'automerge'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only @joelcouchman1978 may enable automerge
+        if: github.actor != 'joelcouchman1978'
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label automerge
+          gh pr comment ${{ github.event.pull_request.number }} --body "Label 'automerge' removed (not added by @joelcouchman1978)."
+          exit 0
+
+      - name: Enable auto-merge (squash)
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+          gh pr comment ${{ github.event.pull_request.number }} --body "✅ Auto-merge enabled. PR will merge once required checks are green."
+

@@ -1,0 +1,63 @@
+name: Agent Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write       # create branch & commit
+  pull-requests: write  # open PR
+  issues: write         # comment back
+
+concurrency:
+  group: agent-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    # Only respond to you; avoids random users triggering it
+    if: github.actor == 'joelcouchman1978' && contains(github.event.comment.body, '/agent implement')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse request
+        id: parse
+        shell: bash
+        run: |
+          body=$(jq -r '.comment.body' "$GITHUB_EVENT_PATH")
+          req="${body#*'/agent implement'}"
+          req="$(echo "$req" | sed 's/^ *//')"
+          echo "request<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${req:-No details provided.}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create PLAN.md (stub only)
+        shell: bash
+        run: |
+          mkdir -p .agent
+          printf "# Agent Plan\n\n## Request\n%s\n" "${{ steps.parse.outputs.request }}" > .agent/PLAN.md
+          git add .agent/PLAN.md
+          git commit -m "chore(agent): scaffold PLAN.md from /agent implement"
+
+      - name: Open PR
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: agent/${{ github.event.issue.number }}-${{ github.run_id }}
+          title: "agent: implement request from issue #${{ github.event.issue.number }}"
+          body: |
+            This PR was auto-created from `/agent implement`.
+
+            **Request:**
+            ```
+            ${{ steps.parse.outputs.request }}
+            ```
+          labels: agent
+          commit-message: "chore(agent): scaffold PLAN.md from /agent implement"
+
+      - name: Comment with PR link
+        if: steps.cpr.outputs.pull-request-url
+        run: gh issue comment ${{ github.event.issue.number }} --body "✅ Opened PR: ${{ steps.cpr.outputs.pull-request-url }}"
+
