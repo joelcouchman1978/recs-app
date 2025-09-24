@@ -2,80 +2,56 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "codex/**" ]
+    branches: ["**"]
   pull_request:
-  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # Detects and handles Python and Node workspaces (runs what exists)
-  build-and-test:
+  api:
+    name: API (Python 3.11)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # ---------- Python ----------
-      - name: Set up Python (if Python project)
-        if: ${{ hashFiles('**/pyproject.toml', '**/requirements.txt') != '' }}
+      - uses: actions/checkout@v4
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Python install
-        if: ${{ hashFiles('**/pyproject.toml', '**/requirements.txt') != '' }}
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install API deps (dev)
         run: |
-          python -m venv .venv
-          . .venv/bin/activate
           python -m pip install -U pip wheel
-          if [ -f pyproject.toml ]; then pip install -e ".[dev]" || true; fi
-          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+          pip install -e "apps/api[dev]"
+      - name: Run tests (SQLite, no Redis)
+        env:
+          USE_SQLITE: "1"
+          DISABLE_REDIS: "1"
+        working-directory: apps/api
+        run: pytest -q
 
-      - name: Python lint/test
-        if: ${{ hashFiles('**/pyproject.toml', '**/requirements.txt') != '' }}
-        run: |
-          . .venv/bin/activate
-          (ruff --version && ruff check .) || true
-          (black --version && black --check .) || true
-          (mypy --version && mypy .) || true
-          (pytest -q --junitxml=_reports/junit.xml) || true
-
-      # ---------- Node/PNPM ----------
-      - name: Set up Node (if Node project)
-        if: ${{ hashFiles('**/package.json') != '' }}
+  web:
+    name: Web (Node 20 + pnpm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Enable Corepack (pnpm)
-        if: ${{ hashFiles('**/package.json') != '' }}
-        run: corepack enable
-
-      - name: Install (pnpm)
-        if: ${{ hashFiles('**/package.json') != '' }}
-        run: |
-          pnpm -v
-          pnpm install --frozen-lockfile || pnpm install
-
-      - name: Lint/Test/Build (Node)
-        if: ${{ hashFiles('**/package.json') != '' }}
-        run: |
-          pnpm run -c "lint || echo 'no lint script'"
-          pnpm run -c "test || echo 'no test script'"
-          pnpm run -c "build || echo 'no build script'"
-
-      # ---------- Artifacts ----------
-      - name: Upload reports/artifacts
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
         with:
-          name: ci-artifacts
-          path: |
-            _reports/**
-            coverage.xml
-            .coverage
-            **/dist/**
-            **/build/**
-          if-no-files-found: ignore
+          version: 9
+      - name: Install
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile=false
+      - name: Build
+        working-directory: apps/web
+        run: pnpm build
