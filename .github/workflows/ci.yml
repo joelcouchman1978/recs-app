@@ -33,7 +33,7 @@ jobs:
           USE_SQLITE: "1"
           DISABLE_REDIS: "1"
         working-directory: apps/api
-        run: pytest -q
+        run: python -m pytest -q
 
   web:
     name: Web (Node 20 + pnpm)
