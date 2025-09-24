@@ -43,6 +43,7 @@ jobs:
           USE_SQLITE: "1"
           DISABLE_REDIS: "1"
           PATH_PREFIX: ""      # force no path prefix
+          PYTHONPATH: ${{ github.workspace }}
         working-directory: apps/api
         run: python -m pytest -q
 
