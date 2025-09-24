@@ -28,6 +28,16 @@ jobs:
           python -m pip install -U pip wheel
           pip install -e "apps/api[dev]"
           pip install pytest
+      - name: Debug: scan for trailing-slash router prefixes
+        run: |
+          echo "🔎 APIRouter(...) with trailing slash in prefix="
+          git grep -nE 'APIRouter\([^)]*prefix\s*=\s*"[^"]*/"' -- apps/api || true
+          echo
+          echo "🔎 include_router(..., prefix=...) with trailing slash"
+          git grep -nE 'include_router\([^)]*prefix\s*=\s*"[^"]*/"' -- apps/api || true
+          echo
+          echo "🔎 Any prefix/root env visible to the runner"
+          env | sort | grep -E '(^PATH_PREFIX=|^ROOT_PATH=|^API_ROOT_PATH=)' || true
       - name: Run tests (SQLite, no Redis)
         env:
           USE_SQLITE: "1"
