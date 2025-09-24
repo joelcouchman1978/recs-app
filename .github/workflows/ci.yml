@@ -28,7 +28,7 @@ jobs:
           python -m pip install -U pip wheel
           pip install -e "apps/api[dev]"
           pip install pytest
-      - name: Debug: scan for trailing-slash router prefixes
+      - name: Debug:scan for trailing-slash router prefixes
         run: |
           echo "🔎 APIRouter(...) with trailing slash in prefix="
           git grep -nE 'APIRouter\([^)]*prefix\s*=\s*"[^"]*/"' -- apps/api || true
