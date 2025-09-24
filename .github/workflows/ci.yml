@@ -32,6 +32,7 @@ jobs:
         env:
           USE_SQLITE: "1"
           DISABLE_REDIS: "1"
+          PATH_PREFIX: ""      # force no path prefix
         working-directory: apps/api
         run: python -m pytest -q
 
