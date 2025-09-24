@@ -8,7 +8,7 @@ import logging
 from ..db import get_session, get_redis
 from ..settings import settings
 
-router = APIRouter(prefix="/", tags=["health"])
+router = APIRouter(tags=["health"])
 
 
 class Health(BaseModel):
