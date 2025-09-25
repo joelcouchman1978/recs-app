@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 API_BASE="${API_BASE:-http://localhost:8000}"
 PROFILE="${PROFILE:-ross}"
 SEED="${SEED:-99}"
 
-if ! READY_PAYLOAD=$(curl -fsS "${API_BASE}/readyz" 2>/dev/null); then
+if ! READY_PAYLOAD=$(curl -fsS -o /dev/null "${API_BASE}/readyz" 2>/dev/null); then
   echo "❌ API not reachable at ${API_BASE}/readyz"
   echo "   Try: make api-local    # no Docker needed (SQLite, in-proc cache)"
   exit 1
@@ -53,5 +53,5 @@ echo "All preflight checks passed."
 
 # Optional family guardrail summary (non-blocking)
 echo "• Family guardrail:"
-curl -fsS "${API_BASE}/recommendations?for=ross&intent=family_mix&seed=99&explain=true" \
+curl -fsS -o /dev/null "${API_BASE}/recommendations?for=ross&intent=family_mix&seed=99&explain=true" \
 | jq '.family | {locked: ((.strong_locked_ids//[])|length), has_warning: has("warning")}'
