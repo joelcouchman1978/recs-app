@@ -23,18 +23,18 @@ def upgrade() -> None:
     op.create_table('events',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('profile_id', sa.Integer(), nullable=False),
-    sa.Column('kind', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('kind', sa.String(), nullable=False),
     sa.Column('payload', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('shows',
     sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('title', sa.String(), nullable=False),
     sa.Column('year_start', sa.Integer(), nullable=True),
     sa.Column('year_end', sa.Integer(), nullable=True),
     sa.Column('tmdb_id', sa.Integer(), nullable=True),
-    sa.Column('imdb_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('imdb_id', sa.String(), nullable=True),
     sa.Column('jw_id', sa.Integer(), nullable=True),
     sa.Column('metadata', sa.JSON(), nullable=True),
     sa.Column('warnings', sa.JSON(), nullable=True),
@@ -44,7 +44,7 @@ def upgrade() -> None:
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('email', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
@@ -52,7 +52,7 @@ def upgrade() -> None:
     op.create_table('availability',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('show_id', sa.Uuid(), nullable=False),
-    sa.Column('platform', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('platform', sa.String(), nullable=False),
     sa.Column('offer_type', sa.Enum('stream', 'rent', 'buy', name='offertype'), nullable=False),
     sa.Column('quality', sa.Enum('SD', 'HD', '_4K', name='quality'), nullable=True),
     sa.Column('price_cents', sa.Integer(), nullable=True),
@@ -90,7 +90,7 @@ def upgrade() -> None:
     sa.Column('show_id', sa.Uuid(), nullable=False),
     sa.Column('primary', sa.Integer(), nullable=False),
     sa.Column('nuance_tags', sa.JSON(), nullable=True),
-    sa.Column('note', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('note', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['profile_id'], ['profiles.id'], ),
