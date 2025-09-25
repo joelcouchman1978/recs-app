@@ -12,3 +12,6 @@ actions-runner/
 actions-runner/
 **/externals/node*/bin/node
 *.tar.gz
+
+**/__pycache__/
+*.py[cod]
