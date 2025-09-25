@@ -35,25 +35,21 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
           python - <<'PY'
           try:
-              import fastapi  # noqa: F401
+              import fastapi  # noqa
           except Exception:
               import os
               os.system('pip install fastapi pydantic')
           PY
           pip install pytest || true
 
-      - name: Run smoke pytest only (SQLite/no-Redis)
+      - name: Run smoke test only (SQLite/no-Redis)
         if: steps.detect_py.outputs.is_python == 'true'
         env:
           USE_SQLITE: '1'
           DISABLE_REDIS: '1'
           PYTHONPATH: '.'
         run: |
-          if [ -f apps/api/tests/test_smoke_ci.py ]; then
-            pytest -q apps/api/tests/test_smoke_ci.py
-          else
-            if ls -1 tests/*.py apps/api/tests/*.py test_*.py *_test.py 2>/dev/null | grep -q .; then pytest -q; else echo "No tests detected — passing"; fi
-          fi
+          pytest -q apps/api/tests/test_smoke_ci.py
 
       - name: Detect Web (Next.js)
         id: detect_web
