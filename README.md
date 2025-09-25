@@ -407,3 +407,9 @@ Restore from a snapshot:
 ```bash
 bash scripts/db_restore.sh infra/backup_YYYYmmdd_HHMMSS.sql.gz
 ```
+
+## Setup
+
+- Run: `bash scripts/dev_bootstrap.sh`
+- Health: `curl -s http://localhost:8000/readyz`
+- Example recs: `curl -s "http://localhost:8000/recommendations?for=ross&seed=99" | jq '.[0] // .items[0]'`
