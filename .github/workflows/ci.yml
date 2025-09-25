@@ -1,5 +1,4 @@
 name: CI
-
 on:
   pull_request:
   push:
@@ -13,24 +12,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-and-health:
+  test-and-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+# ---------- Python (API) ----------
       - name: Detect Python repo
-        id: detect
-        shell: bash
+        id: detect_py
         run: |
           if ls -1 **/*.py 2>/dev/null | grep -q . || [ -f requirements.txt ] || [ -f pyproject.toml ]; then
             echo "is_python=true" >> $GITHUB_OUTPUT
           else
             echo "is_python=false" >> $GITHUB_OUTPUT
           fi
-          # Streamlit signal (loose): requirements/pyproject mention streamlit OR any file mentions "streamlit"
+          # Streamlit hint (won't apply to this repo; harmless)
           if grep -Rqi "streamlit" requirements.txt pyproject.toml . 2>/dev/null; then
             echo "looks_streamlit=true" >> $GITHUB_OUTPUT
           else
@@ -38,15 +35,14 @@ jobs:
           fi
 
       - name: Set up Python
-        if: steps.detect.outputs.is_python == 'true'
+        if: steps.detect_py.outputs.is_python == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
       - name: Install Python deps (best effort)
-        if: steps.detect.outputs.is_python == 'true'
-        shell: bash
+        if: steps.detect_py.outputs.is_python == 'true'
         run: |
           python -m pip install -U pip wheel
           if [ -f pyproject.toml ]; then
@@ -56,24 +52,24 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
-          # Ensure pytest available if tests exist
           pip install pytest || true
 
-      - name: Run tests (only if tests exist)
-        if: steps.detect.outputs.is_python == 'true'
-        shell: bash
+      - name: Run pytest (if tests exist; SQLite/no-Redis)
+        if: steps.detect_py.outputs.is_python == 'true'
+        env:
+          USE_SQLITE: "1"
+          DISABLE_REDIS: "1"
         run: |
-          if ls -1 tests/*.py test_*.py *_test.py 2>/dev/null | grep -q .; then
+          if ls -1 tests/*.py apps/api/tests/*.py test_*.py *_test.py 2>/dev/null | grep -q .; then
             echo "Tests detected, running pytest..."
             pytest -q
           else
             echo "No tests detected — passing CI per policy."
           fi
 
-      # --- Streamlit healthcheck (port 8501) ---
+      # Optional Streamlit healthcheck (skips if not applicable)
       - name: Streamlit healthcheck (8501)
-        if: steps.detect.outputs.is_python == 'true' && steps.detect.outputs.looks_streamlit == 'true'
-        shell: bash
+        if: steps.detect_py.outputs.is_python == 'true' && steps.detect_py.outputs.looks_streamlit == 'true'
         env:
           START_CMD: "streamlit run app.py --server.port 8501 --server.headless true"
           HEALTH_URL: "http://localhost:8501/"
@@ -81,39 +77,48 @@ jobs:
           SLEEP_SECS: "3"
         run: |
           set -euo pipefail
-          echo "Attempting to launch Streamlit on 8501..."
-          # Try to ensure streamlit is present in CI even if not pinned
           python -c "import streamlit" 2>/dev/null || pip install streamlit
-          # If app.py is missing, skip healthcheck to avoid false negatives
           if [ ! -f app.py ]; then
-            echo "No app.py found; skipping Streamlit healthcheck (repo may organize app differently)."
+            echo "No app.py; skipping Streamlit healthcheck."
             exit 0
           fi
-          # Launch in background and capture logs
           bash -lc "$START_CMD >> health.log 2>&1 & echo \$! > app.pid"
           trap 'kill $(cat app.pid) 2>/dev/null || true' EXIT
-          echo "Waiting for $HEALTH_URL ..."
           end=$((SECONDS + WAIT_SECS))
           ok=0
           while [ $SECONDS -lt $end ]; do
-            if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
-              ok=1; break
-            fi
+            if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then ok=1; break; fi
             sleep "$SLEEP_SECS"
           done
           if [ "$ok" -ne 1 ]; then
-            echo "Healthcheck failed to respond 200 within ${WAIT_SECS}s"
+            echo "Healthcheck failed within ${WAIT_SECS}s"
             echo "---- Last 200 lines of health.log ----"
             tail -n 200 health.log || true
             exit 1
           fi
           echo "Healthcheck OK."
 
-      - name: Upload health logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: health-logs
-          path: health.log
-          if-no-files-found: ignore
+      # ---------- Node (Web) ----------
+      - name: Detect web
+        id: detect_web
+        run: |
+          if [ -f apps/web/package.json ]; then
+            echo "has_web=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_web=false" >> $GITHUB_OUTPUT
+          fi
 
+      - name: Setup Node (web)
+        if: steps.detect_web.outputs.has_web == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Build Next.js web
+        if: steps.detect_web.outputs.has_web == 'true'
+        run: |
+          corepack enable || true
+          pnpm --version || npm i -g pnpm
+          pnpm -C apps/web install
+          pnpm -C apps/web build
