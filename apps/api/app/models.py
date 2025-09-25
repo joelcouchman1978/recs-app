@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Optional, List
 
 from sqlalchemy import JSON
-from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import JSON, Column, String
+from sqlmodel import Field,Relationship,SQLModel
 
 from .settings import settings
 
@@ -51,7 +52,7 @@ class Profile(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id")
     name: ProfileName
     age_limit: Optional[int] = None
-    boundaries: dict = Field(default_factory=dict, sa_column_kwargs={"type_": JSONType})
+    boundaries: dict = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     user: Optional[User] = Relationship(back_populates="profiles")
@@ -66,9 +67,9 @@ class Show(SQLModel, table=True):
     tmdb_id: Optional[int] = None
     imdb_id: Optional[str] = None
     jw_id: Optional[int] = None
-    metadata: dict = Field(default_factory=dict, sa_column_kwargs={"type_": JSONType})
-    warnings: list = Field(default_factory=list, sa_column_kwargs={"type_": JSONType})
-    flags: list = Field(default_factory=list, sa_column_kwargs={"type_": JSONType})
+    meta: dict = Field(default_factory=dict, sa_column=Column("metadata", JSON))
+    warnings: list = Field(default_factory=list, sa_column=Column(JSON))
+    flags: list = Field(default_factory=list, sa_column=Column(JSON))
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -103,7 +104,7 @@ class Rating(SQLModel, table=True):
     profile_id: int = Field(foreign_key="profiles.id")
     show_id: uuid.UUID = Field(foreign_key="shows.id")
     primary: int = Field(ge=0, le=2, description="0=BAD,1=ACCEPTABLE,2=VERY GOOD")
-    nuance_tags: Optional[List[str]] = Field(default=None, sa_column_kwargs={"type_": _array_type(item_type=str)})
+    nuance_tags: Optional[List[str]] = Field(default=None, sa_column=Column(JSON, nullable=True))
     note: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -112,13 +113,13 @@ class Rating(SQLModel, table=True):
 class EmbeddingShow(SQLModel, table=True):
     __tablename__ = "embeddings_show"
     show_id: uuid.UUID = Field(foreign_key="shows.id", primary_key=True)
-    emb: list[float] = Field(sa_column_kwargs={"type_": _array_type(item_type=float)})
+    emb: list[float] = Field(default_factory=list, sa_column=Column(JSON))
 
 
 class EmbeddingProfile(SQLModel, table=True):
     __tablename__ = "embeddings_profile"
     profile_id: int = Field(foreign_key="profiles.id", primary_key=True)
-    emb: list[float] = Field(sa_column_kwargs={"type_": _array_type(item_type=float)})
+    emb: list[float] = Field(default_factory=list, sa_column=Column(JSON))
 
 
 class Watchlist(SQLModel, table=True):
@@ -134,6 +135,5 @@ class Event(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     profile_id: int
     kind: str
-    payload: dict = Field(default_factory=dict, sa_column_kwargs={"type_": JSONType})
+    payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
-

@@ -1,3 +1,5 @@
+import os
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,7 +20,7 @@ from .routers.shows import router as shows_router
 from .routers.ratings import router as ratings_router
 from .routers.watchlist import router as watchlist_router
 from .routers.recommendations import router as recs_router
-from .routers.admin import router as admin_router
+
 from .routers.onboarding import router as onboarding_router
 from .routers.debug import router as debug_router
 from .routers.providers import router as providers_router
@@ -29,6 +31,10 @@ configure_logging()
 init_db()
 app = FastAPI(title="Recs API", version="0.1.0")
 
+
+if os.getenv('ENABLE_DEBUG_ENDPOINTS', '0') in ('1','true','True'):
+    from .routers.admin import router as admin_router
+    app.include_router(admin_router)
 allow = settings.allow_origins or "http://localhost:3000"
 origins = [o.strip().rstrip('/') for o in allow.split(',') if o.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -44,7 +50,7 @@ app.include_router(ratings_router)
 app.include_router(watchlist_router)
 app.include_router(recs_router)
 app.include_router(metrics_router)
-app.include_router(admin_router)
+
 app.include_router(onboarding_router)
 app.include_router(debug_router)
 app.include_router(providers_router)
