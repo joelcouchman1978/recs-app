@@ -3,28 +3,41 @@ name: Agent Commands
 on:
   issue_comment:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      request:
+        description: "Plain-English request"
+        required: false
+        default: ""
 
 permissions:
-  contents: write       # create branch & commit
-  pull-requests: write  # open PR
-  issues: write         # comment back
+  contents: write
+  pull-requests: write
+  issues: write
 
 concurrency:
-  group: agent-${{ github.event.issue.number }}
+  group: agent-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
   implement:
-    # Only respond to you; avoids random users triggering it
-    if: (github.actor == 'joelcouchman78' || github.actor == 'joelcouchman1978') && contains(github.event.comment.body, '/agent implement')
+    # Run if:
+    # - manual dispatch, OR
+    # - a new issue comment that starts with '/agent implement' by your usernames
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        (github.actor == 'joelcouchman78' || github.actor == 'joelcouchman1978') &&
+        startsWith(github.event.comment.body, '/agent implement')
+      )
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Parse request
-        id: parse
-        shell: bash
+      - name: Parse request (issue_comment)
+        id: parse_comment
+        if: github.event_name == 'issue_comment'
         run: |
           body=$(jq -r '.comment.body' "$GITHUB_EVENT_PATH")
           req="${body#*'/agent implement'}"
@@ -33,31 +46,36 @@ jobs:
           echo "${req:-No details provided.}" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
-      - name: Create PLAN.md (stub only)
-        shell: bash
+      - name: Parse request (manual)
+        id: parse_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "request<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${{ inputs.request }}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create PLAN.md (stub)
         run: |
           mkdir -p .agent
-          printf "# Agent Plan\n\n## Request\n%s\n" "${{ steps.parse.outputs.request }}" > .agent/PLAN.md
+          printf "# Agent Plan\n\n## Request\n%s\n" "${{ steps.parse_comment.outputs.request || steps.parse_dispatch.outputs.request || 'No details provided.' }}" > .agent/PLAN.md
           git add .agent/PLAN.md
-          git commit -m "chore(agent): scaffold PLAN.md from /agent implement"
+          git commit -m "chore(agent): scaffold PLAN.md"
 
       - name: Open PR
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: agent/${{ github.event.issue.number }}-${{ github.run_id }}
-          title: "agent: implement request from issue #${{ github.event.issue.number }}"
+          branch: agent/${{ github.run_id }}
+          title: "agent: implement request"
           body: |
-            This PR was auto-created from `/agent implement`.
-
+            This PR was auto-created.
             **Request:**
             ```
-            ${{ steps.parse.outputs.request }}
+            ${{ steps.parse_comment.outputs.request || steps.parse_dispatch.outputs.request }}
             ```
           labels: agent
-          commit-message: "chore(agent): scaffold PLAN.md from /agent implement"
+          commit-message: "chore(agent): scaffold PLAN.md"
 
-      - name: Comment with PR link
-        if: steps.cpr.outputs.pull-request-url
+      - name: Comment back with PR link
+        if: github.event_name == 'issue_comment' && steps.cpr.outputs.pull-request-url
         run: gh issue comment ${{ github.event.issue.number }} --body "✅ Opened PR: ${{ steps.cpr.outputs.pull-request-url }}"
-
