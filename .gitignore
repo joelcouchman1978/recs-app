@@ -7,3 +7,8 @@ actions-runner/
 actions-runner/
 **/externals/node*/bin/node
 *.tar.gz
+
+# ignore self-hosted runner binaries
+actions-runner/
+**/externals/node*/bin/node
+*.tar.gz
