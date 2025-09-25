@@ -16,7 +16,7 @@ concurrency:
 jobs:
   implement:
     # Only respond to you; avoids random users triggering it
-    if: github.actor == 'joelcouchman1978' && contains(github.event.comment.body, '/agent implement')
+    if: (github.actor == 'joelcouchman78' || github.actor == 'joelcouchman1978') && contains(github.event.comment.body, '/agent implement')
     runs-on: ubuntu-latest
 
     steps:
