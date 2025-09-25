@@ -23,7 +23,7 @@ jobs:
   implement:
     # Run if:
     # - manual dispatch, OR
-    # - /agent implement from your usernames
+    # - a new issue comment that starts with '/agent implement' by your usernames
     if: |
       github.event_name == 'workflow_dispatch' ||
       (
