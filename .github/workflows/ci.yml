@@ -1,15 +1,11 @@
 name: CI
 on:
   pull_request:
-  push:
-    branches: [main]
-permissions:
-  contents: read
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 jobs:
   test-and-health:
     runs-on: ubuntu-latest
     steps:
-      - run: echo OK
+      - uses: actions/checkout@v4
+      - run: echo "smoke ok"
