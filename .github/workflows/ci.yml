@@ -4,8 +4,15 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 jobs:
-  test-and-health:
+  api-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "smoke ok"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: API smoke (no Docker)
+        env:
+          VENV_PY: python
+          PY: python
+        run: make sandbox-smoke
