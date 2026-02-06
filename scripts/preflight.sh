@@ -4,8 +4,11 @@ set -uo pipefail
 API_BASE="${API_BASE:-http://localhost:8000}"
 PROFILE="${PROFILE:-ross}"
 SEED="${SEED:-99}"
+TOKEN="${TOKEN:-devtoken:demo@local.test}"
 
-if ! READY_PAYLOAD=$(curl -fsS -o /dev/null "${API_BASE}/readyz" 2>/dev/null); then
+AUTH_HEADER=(-H "Authorization: Bearer ${TOKEN}")
+
+if ! READY_PAYLOAD=$(curl -fsS "${API_BASE}/readyz" 2>/dev/null); then
   echo "❌ API not reachable at ${API_BASE}/readyz"
   echo "   Try: make api-local    # no Docker needed (SQLite, in-proc cache)"
   exit 1
@@ -29,12 +32,12 @@ echo "$M" | grep -Eq 'recs_cache_(hits|misses)_total' && pass "metrics: cache co
 echo "$M" | grep -q 'recs_stale_ratio_bucket' && pass "metrics: stale ratio" || fail "metrics: stale ratio missing"
 
 # 3) seeded determinism
-A=$(curl -sf "${API_BASE}/recommendations?for=${PROFILE}&seed=${SEED}" | jq -r '.[0].id // .items[0].id')
-B=$(curl -sf "${API_BASE}/recommendations?for=${PROFILE}&seed=${SEED}" | jq -r '.[0].id // .items[0].id')
+A=$(curl -sf "${AUTH_HEADER[@]}" "${API_BASE}/recommendations?for=${PROFILE}&seed=${SEED}" | jq -r '.[0].id // .items[0].id')
+B=$(curl -sf "${AUTH_HEADER[@]}" "${API_BASE}/recommendations?for=${PROFILE}&seed=${SEED}" | jq -r '.[0].id // .items[0].id')
 test -n "$A" && test "$A" = "$B" && pass "seeded determinism stable" || fail "seeded determinism drift"
 
 # 4) family mix explain (optional meta)
-FM=$(curl -sf "${API_BASE}/recommendations?for=${PROFILE}&intent=family_mix&seed=${SEED}&explain=true" | jq '.family | has("strong_min_fit")' 2>/dev/null || echo false)
+FM=$(curl -sf "${AUTH_HEADER[@]}" "${API_BASE}/recommendations?for=${PROFILE}&intent=family_mix&seed=${SEED}&explain=true" | jq '.family | has("strong_min_fit")' 2>/dev/null || echo false)
 test "$FM" = "true" && pass "family meta present (explain=true)" || pass "family meta not enabled (ok)"
 
 # 5) admin config summary (if present)
@@ -45,7 +48,7 @@ else
 fi
 
 # 6) availability stale flag (best-effort)
-curl -sf "${API_BASE}/recommendations?for=${PROFILE}&seed=${SEED}" \
+curl -sf "${AUTH_HEADER[@]}" "${API_BASE}/recommendations?for=${PROFILE}&seed=${SEED}" \
  | jq '(.items // .) | .[0].availability | has("stale")' 2>/dev/null \
  | grep -q true && pass "availability payload has stale flag" || pass "availability stale flag not present (ok)"
 
@@ -53,5 +56,5 @@ echo "All preflight checks passed."
 
 # Optional family guardrail summary (non-blocking)
 echo "• Family guardrail:"
-curl -fsS -o /dev/null "${API_BASE}/recommendations?for=ross&intent=family_mix&seed=99&explain=true" \
+curl -fsS "${AUTH_HEADER[@]}" "${API_BASE}/recommendations?for=family&intent=family_mix&seed=99&explain=true" \
 | jq '.family | {locked: ((.strong_locked_ids//[])|length), has_warning: has("warning")}'
