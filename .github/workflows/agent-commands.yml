@@ -21,9 +21,7 @@ concurrency:
 
 jobs:
   implement:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      ((github.actor == 'joelcouchman78' || github.actor == 'joelcouchman1978') && startsWith(github.event.comment.body, '/agent implement'))
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.actor == 'joelcouchman78' || github.actor == 'joelcouchman1978') && github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/agent implement')) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -51,11 +49,9 @@ jobs:
       - name: Create PLAN.md (stub)
         run: |
           mkdir -p .agent
-          printf "# Agent Plan
-
-## Request
-%s
-" "${{ steps.parse_comment.outputs.request || steps.parse_dispatch.outputs.request || 'No details provided.' }}" > .agent/PLAN.md
+          printf "# Agent Plan\n\n## Request\n%s\n" "${{ steps.parse_comment.outputs.request || steps.parse_dispatch.outputs.request || 'No details provided.' }}" > .agent/PLAN.md
+          git config user.name "recs-app agent"
+          git config user.email "actions@users.noreply.github.com"
           git add .agent/PLAN.md
           git commit -m "chore(agent): scaffold PLAN.md"
 
@@ -64,9 +60,9 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           branch: agent/${{ github.run_id }}
-          title: agent: implement request
+          title: "agent: implement request"
           body: |
             Request:
             ${{ steps.parse_comment.outputs.request || steps.parse_dispatch.outputs.request }}
           labels: agent
-          commit-message: chore(agent): scaffold PLAN.md
+          commit-message: "chore(agent): scaffold PLAN.md"

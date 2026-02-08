@@ -42,7 +42,7 @@ jobs:
         with:
           ref: refs/heads/main
 
-      - name: Guard: skip if already a Revert or marked [skip-revert]
+      - name: "Guard: skip if already a Revert or marked [skip-revert]"
         id: guard
         run: |
           SHA='${{ github.event.workflow_run.head_sha }}'
