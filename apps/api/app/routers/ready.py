@@ -34,8 +34,12 @@ async def readyz():
 
     try:
         r = get_redis()
-        pong = r.ping() if r else False
-        checks["redis"] = {"ok": bool(pong)}
+        if r is None:
+            # Redis is optional in local/sandbox runs when DISABLE_REDIS is set.
+            checks["redis"] = {"ok": True, "skipped": True}
+        else:
+            pong = r.ping()
+            checks["redis"] = {"ok": bool(pong)}
     except Exception as e:
         checks["redis"] = {"ok": False, "error": str(e)}
 
@@ -43,4 +47,3 @@ async def readyz():
 
     overall = "ok" if all(x.get("ok") for x in checks.values()) else "degraded"
     return Ready(status=overall, time_utc=datetime.now(timezone.utc).isoformat(), checks=checks)
-

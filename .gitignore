@@ -8,6 +8,15 @@ actions-runner/
 **/externals/node*/bin/node
 *.tar.gz
 
+# Local dev artifacts
+.venv_api/
+.venv*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.local/
+.pnpm-store/
+
 # ignore self-hosted runner binaries
 actions-runner/
 **/externals/node*/bin/node

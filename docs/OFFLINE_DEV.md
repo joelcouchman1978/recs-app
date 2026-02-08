@@ -16,7 +16,7 @@ Copy the resulting `vendor/wheels` directory into this repository. Then start th
 make api-local
 ```
 
-`scripts/run_api_local.sh` creates a virtualenv under `.venv_api`, installs packages from `vendor/wheels` when available, and runs Uvicorn against SQLite + in-process cache.
+`scripts/run_api_local.sh` creates a virtualenv under `.venv_api`, installs packages from `vendor/wheels` when available, and runs Uvicorn against SQLite + in-process cache. If dependency install isn’t possible (fully offline and no wheel cache), it falls back to a dependency-free “lite” server.
 
 ## Node / pnpm (Web)
 
@@ -31,7 +31,7 @@ Archive the generated store (usually `.pnpm-store`) and extract it here into `ve
 
 ```bash
 cd apps/web
-PNPM_HOME="$(pwd)/../../vendor/pnpm-store"
+export PNPM_STORE_DIR="$(pwd)/../../vendor/pnpm-store"
 pnpm install --offline
 ```
 

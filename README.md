@@ -27,6 +27,16 @@ bash scripts/dev_bootstrap.sh
 - Web: http://localhost:3000
 - API docs: http://localhost:8000/docs
 
+## Lite Mode (Offline/Sandbox)
+
+If you can’t use Docker or install dependencies (e.g. sandbox with no network), you can still run a dependency-free “lite” API:
+
+```bash
+make api-local
+```
+
+Then open http://localhost:8000 (basic UI) or hit `/recommendations`, `/readyz`, `/metrics`.
+
 ## Production-like Run (Compose)
 
 To run with production builds (no dev servers):

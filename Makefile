@@ -1,12 +1,13 @@
 .PHONY: preflight preflight-family refresh-dry smoke open-prom open-grafana open-alerts api-local api-local-stop preflight-local sandbox-smoke
 
 API_BASE ?= http://localhost:8000
+TOKEN ?= devtoken:demo@local.test
 
 preflight:
-	API_BASE=$(API_BASE) bash ./scripts/preflight.sh
+	API_BASE=$(API_BASE) TOKEN=$(TOKEN) bash ./scripts/preflight.sh
 
 preflight-family:
-	@curl -fsS "$(API_BASE)/recommendations?for=ross&intent=family_mix&seed=99&explain=true" \
+	@curl -fsS -H "Authorization: Bearer $(TOKEN)" "$(API_BASE)/recommendations?for=family&intent=family_mix&seed=99&explain=true" \
 	| jq -e '.family | (has("strong_locked_ids") and (.strong_locked_ids|length>0)) or has("warning")' >/dev/null \
 	&& echo "✅ Family Mix guardrail OK" || (echo "❌ Family Mix guardrail FAIL"; exit 1)
 
@@ -34,8 +35,7 @@ api-local-stop:
 	@pkill -f "uvicorn apps.api.app.main:app" || true
 
 preflight-local:
-	@API_BASE=$${API_BASE:-http://localhost:8000} bash ./scripts/preflight.sh
+	@API_BASE=$${API_BASE:-http://localhost:8000} TOKEN=$${TOKEN:-$(TOKEN)} bash ./scripts/preflight.sh
 
-sandbox-smoke: api-local
-	@sleep 1
-	@$(MAKE) preflight-local
+sandbox-smoke:
+	API_BASE=$(API_BASE) TOKEN=$(TOKEN) bash ./scripts/sandbox_smoke.sh
